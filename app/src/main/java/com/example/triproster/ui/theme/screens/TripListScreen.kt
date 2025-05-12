@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,13 +21,14 @@ import com.google.firebase.database.*
 fun TripListScreen(navController: NavHostController) {
     val tripList = remember { mutableStateListOf<Trip>() }
     val isLoading = remember { mutableStateOf(true) }
+    val deletedTripIds = remember { mutableStateListOf<String>() }
 
     var searchQuery by remember { mutableStateOf("") }
     var sortOrder by remember { mutableStateOf("Ascending") }
 
-    // Firebase listener
-    LaunchedEffect(Unit) {
-        val dbRef = FirebaseDatabase.getInstance().getReference("trips")
+    val dbRef = remember { FirebaseDatabase.getInstance().getReference("trips") }
+
+    DisposableEffect(Unit) {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 tripList.clear()
@@ -46,11 +47,14 @@ fun TripListScreen(navController: NavHostController) {
         }
 
         dbRef.addValueEventListener(listener)
-        onDispose { dbRef.removeEventListener(listener) }
+
+        onDispose {
+            dbRef.removeEventListener(listener)
+        }
     }
 
-    // Filtering and Sorting
     val filteredSortedTrips = tripList
+        .filter { it.id !in deletedTripIds }
         .filter { it.title.contains(searchQuery, ignoreCase = true) }
         .sortedBy { it.date }
 
@@ -63,12 +67,8 @@ fun TripListScreen(navController: NavHostController) {
     } else {
         TripListContent(
             trips = displayTrips,
-            onAddTripClick = { navController.navigate("addTrip") },
             onEditTripClick = { tripId -> navController.navigate("editTrip/$tripId") },
-            onDeleteTripClick = { trip ->
-                val dbRef = FirebaseDatabase.getInstance().getReference("trips")
-                dbRef.child(trip.id).removeValue()
-            },
+            onDeleteTripClick = { trip -> deletedTripIds.add(trip.id) },
             searchQuery = searchQuery,
             onSearchQueryChange = { searchQuery = it },
             sortOrder = sortOrder,
@@ -77,15 +77,10 @@ fun TripListScreen(navController: NavHostController) {
     }
 }
 
-fun onDispose(function: () -> Unit) {
-
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripListContent(
     trips: List<Trip>,
-    onAddTripClick: () -> Unit,
     onEditTripClick: (String) -> Unit,
     onDeleteTripClick: (Trip) -> Unit,
     searchQuery: String,
@@ -96,11 +91,6 @@ fun TripListContent(
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Trip List") })
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddTripClick) {
-                Icon(Icons.Default.Add, contentDescription = "Add Trip")
-            }
         }
     ) { padding ->
         Column(
@@ -109,7 +99,6 @@ fun TripListContent(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // Search bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
@@ -118,11 +107,11 @@ fun TripListContent(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Sort dropdown
             var expanded by remember { mutableStateOf(false) }
             Box {
                 OutlinedButton(onClick = { expanded = true }) {
-                    Text("Sort by Date: $sortOrder")
+                    Text("Sort: $sortOrder")
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                 }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(text = { Text("Ascending") }, onClick = {
@@ -137,10 +126,9 @@ fun TripListContent(
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Trip list or empty state
             AnimatedVisibility(visible = trips.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No trips found. Try adding or adjusting your search.")
+                    Text("No trips found. Try adjusting your search.")
                 }
             }
 
@@ -162,22 +150,11 @@ fun TripListContent(
 @Composable
 fun TripListScreenPreview() {
     val sampleTrips = listOf(
-        Trip(
-            id = "1",
-            title = "Trip to Goa",
-            description = "Beach vacation with friends.",
-            date = "2025-06-20"
-        ),
-        Trip(
-            id = "2",
-            title = "Trip to Manali",
-            description = "Hiking and hot springs.",
-            date = "2025-07-15"
-        )
+        Trip(id = "1", title = "Trip to Goa", description = "Beach vacation with friends.", date = "2025-06-20"),
+        Trip(id = "2", title = "Trip to Manali", description = "Hiking and hot springs.", date = "2025-07-15")
     )
     TripListContent(
         trips = sampleTrips,
-        onAddTripClick = {},
         onEditTripClick = {},
         onDeleteTripClick = {},
         searchQuery = "",
