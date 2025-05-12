@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "898319430551",
+    "project_id": "trip-roster-8676d",
+    "storage_bucket": "trip-roster-8676d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:898319430551:android:2e383c901c7249b957cad2",
+        "android_client_info": {
+          "package_name": "com.example.triproster"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcYQSZ4WcRL7WxBYLpyXJI9NIElROJG_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
